@@ -12,7 +12,8 @@ import (
 
 func CheckSpeeds(w http.ResponseWriter, r *http.Request, header Header) {
 	var speeds Speeds
-	if body, err := ioutil.ReadAll(io.LimitReader(r.Body, 10485)); err != nil {
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 10485))
+	if err != nil {
 		panic(err)
 	}
 	if err := r.Body.Close(); err != nil {
@@ -26,7 +27,8 @@ func CheckSpeeds(w http.ResponseWriter, r *http.Request, header Header) {
 		}
 	}
 
-	if i, err := strconv.ParseFloat(speeds.Download, 32); err != nil {
+	i, err := strconv.ParseFloat(speeds.Download, 32)
+	if err != nil {
 		panic(err)
 	}
 
@@ -55,7 +57,8 @@ func SendTweet(speeds Speeds, header Header) {
 	req.Header.Add("Authorization", headerString)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Content-Length", strconv.Itoa(len("status=" + status)))
-	if res, err := client.Do(req); err != nil {
+	res, err := client.Do(req)
+	if err != nil {
 		panic(err)
 	}
 	body, _ := ioutil.ReadAll(io.LimitReader(res.Body, 10485678))
