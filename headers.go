@@ -23,28 +23,24 @@ func GetHeaderValues() *Header {
 	header.SignatureMethod = "HMAC-SHA1"
 	header.Version = "1.0"
 
-	consumerKey, err := ioutil.ReadFile("consumer_key.txt")
-	if err != nil {
-		panic(err)
-	}
-	consumerSecret, err := ioutil.ReadFile("consumer_secret.txt")
-	if err != nil {
-		panic(err)
-	}
-	accessToken, err := ioutil.ReadFile("access_token.txt")
-	if err != nil {
-		panic(err)
-	}
-	accessTokenSecret, err := ioutil.ReadFile("access_token_secret.txt")
-	if err != nil {
-		panic(err)
-	}
+	consumerKey := AssignHeaderValues("consumer_key.txt")
+	consumerSecret := AssignHeaderValues("consumer_secret.txt")
+	accessToken := AssignHeaderValues("access_token.txt")
+	accessTokenSecret := AssignHeaderValues("access_token_secret.txt")
 
 	header.ConsumerKey = string(consumerKey)
 	header.Token = string(accessToken)
 	header.SigningKey = QEscape(string(consumerSecret)) + "&" + QEscape(string(accessTokenSecret))
 	header.PartialBaseString = "POST&" + QEscape("https://api.twitter.com/1.1/statuses/update.json") + "&"
 	return &header
+}
+
+func AssignHeaderValues(fileName string) []byte {
+	headerVal, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		panic(err)
+	}
+	return headerVal
 }
 
 func UpdateHeaderValues(header Header, status string) Header {
@@ -57,14 +53,8 @@ func UpdateHeaderValues(header Header, status string) Header {
 	header.Nonce = reg.ReplaceAllString(nonce, "")
 	header.Timestamp = strconv.FormatInt(int64(time.Now().Unix()), 10)
 
-	paramString := "include_entities=true"
-	paramString += "&oauth_consumer_key=" + QEscape(header.ConsumerKey)
-	paramString += "&oauth_nonce=" + QEscape(header.Nonce)
-	paramString += "&oauth_signature_method=" + header.SignatureMethod
-	paramString += "&oauth_timestamp=" + header.Timestamp
-	paramString += "&oauth_token=" + QEscape(header.Token)
-	paramString += "&oauth_version=" + header.Version
-	paramString += "&status=" + status
+	paramString := "include_entities=true&oauth_consumer_key=" + QEscape(header.ConsumerKey) + "&oauth_nonce=" + QEscape(header.Nonce) + "&oauth_signature_method=" + header.SignatureMethod +
+		"&oauth_timestamp=" + header.Timestamp + "&oauth_token=" + QEscape(header.Token) + "&oauth_version=" + header.Version + "&status=" + status
 
 	base := []byte(header.PartialBaseString + QEscape(paramString))
 	h := hmac.New(sha1.New, []byte(header.SigningKey))
@@ -74,13 +64,6 @@ func UpdateHeaderValues(header Header, status string) Header {
 }
 
 func GetCompleteHeaderString(header Header) string {
-	headerString := "OAuth "
-	headerString += "oauth_consumer_key=\"" + QEscape(header.ConsumerKey) + "\", "
-	headerString += "oauth_nonce=\"" + QEscape(header.Nonce) + "\", "
-	headerString += "oauth_signature=\"" + header.Signature + "\", "
-	headerString += "oauth_signature_method=\"" + header.SignatureMethod + "\", "
-	headerString += "oauth_timestamp=\"" + header.Timestamp + "\", "
-	headerString += "oauth_token=\"" + QEscape(header.Token) + "\", "
-	headerString += "oauth_version=\"" + header.Version + "\""
-	return headerString
+	return "OAuth oauth_consumer_key=\"" + QEscape(header.ConsumerKey) + "\", oauth_nonce=\"" + QEscape(header.Nonce) + "\", oauth_signature=\"" + header.Signature + "\", oauth_signature_method=\"" +
+		header.SignatureMethod + "\", oauth_timestamp=\"" + header.Timestamp + "\", oauth_token=\"" + QEscape(header.Token) + "\", oauth_version=\"" + header.Version + "\""
 }
