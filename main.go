@@ -10,12 +10,7 @@ import (
 		"strconv"
 )
 
-type Speeds struct {
-	Download string `json:'download'`
-	Upload  string `json:'upload'`
-}
-
-func CheckSpeeds(w http.ResponseWriter, r *http.Request) {
+func CheckSpeeds(w http.ResponseWriter, r *http.Request, header Header) {
 	var speeds Speeds
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 10485))
 	if err != nil {
@@ -34,11 +29,11 @@ func CheckSpeeds(w http.ResponseWriter, r *http.Request) {
 
 	i, err := strconv.ParseFloat(speeds.Download, 32)
 	if err != nil {
-		return
+		panic(err)
 	}
 
 	if (i < 10.0) {
-		SendTweet(*speeds)
+		SendTweet(speeds, header)
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -48,30 +43,33 @@ func CheckSpeeds(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func SendTweet(&speeds Speeds) {
-	status := "Switched from BCS 50 Mbps $50/month to @TWC 15 Mbps $50/month to actually get Download: " + speeds.Downlad + " Mbps Upload: " + speeds.Upload + " Mbps. Not a happy camper."
+func SendTweet(speeds Speeds, header Header) {
+	status := "Switched from BCS 50 Mbps $50/month to @TWC 15 Mbps $50/month to actually get Download: " + speeds.Download + " Mbps Upload: " + speeds.Upload + " Mbps. Not a happy camper."
 	status = url.QueryEscape(status)
-	client := &http.client
-	req.Header.Add("Authorization", "oauth_consumer_key=\"" + consumerKey + "\"")
-	req.Header.Add("Authorization", "oauth_nonce=\"" + nonce + "\"")
-	req.Header.Add("Authorization", "oauth_signature=\"" + )
-	req.Header.Add("Authorization", "")
-	req.Header.Add("Authorization", "")
-	req.Header.Add("Authorization", "")
-	req.Header.Add("Authorization", "")
-	req.Header.Add("Authorization", "")
-	req, err := http.NewRequest("POST", "https://api.twitter.com/1.1/statuses/update.json?status=" + status)
+	header = UpdateHeaderValues(header, status)
+	client := &http.Client{}
+	fmt.Printf("%s\n\n", "https://api.twitter.com/1.1/statuses/update.json?status=" + status)
+	req, err := http.NewRequest("POST", "https://api.twitter.com/1.1/statuses/update.json?status=" + status, nil)
 	if err != nil {
 		panic(err)
 	}
+	headerString := GetCompleteHeaderString(header)
+	fmt.Printf("%s\n\n", headerString)
+	req.Header.Add("Authorization", headerString)
 	res, err := client.Do(req)
 	if err != nil {
 		panic(err)
 	}
+	body, _ := ioutil.ReadAll(io.LimitReader(res.Body, 10485678))
+	fmt.Printf("%s\n\n", string(body))
+	res.Body.Close()
 }
 
 func main() {
-	http.HandleFunc("/speeds", CheckSpeeds)
+	header := GetHeaderValues()
+	http.HandleFunc("/speeds", func(w http.ResponseWriter, r *http.Request) {
+		CheckSpeeds(w, r, *header)
+	})
 
 	http.ListenAndServe(":8080", nil)
 }
