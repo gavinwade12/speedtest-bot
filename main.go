@@ -2,8 +2,8 @@ package main
 
 import (
 		"fmt"
+		"bytes"
 		"net/http"
-		"net/url"
 		"io"
 		"io/ioutil"
 		"encoding/json"
@@ -45,17 +45,18 @@ func CheckSpeeds(w http.ResponseWriter, r *http.Request, header Header) {
 
 func SendTweet(speeds Speeds, header Header) {
 	status := "Switched from BCS 50 Mbps $50/month to @TWC 15 Mbps $50/month to actually get Download: " + speeds.Download + " Mbps Upload: " + speeds.Upload + " Mbps. Not a happy camper."
-	status = url.QueryEscape(status)
+	status = QEscape(status)
 	header = UpdateHeaderValues(header, status)
 	client := &http.Client{}
-	fmt.Printf("%s\n\n", "https://api.twitter.com/1.1/statuses/update.json?status=" + status)
-	req, err := http.NewRequest("POST", "https://api.twitter.com/1.1/statuses/update.json?status=" + status, nil)
+	req, err := http.NewRequest("POST", "https://api.twitter.com/1.1/statuses/update.json?include_entities=true", bytes.NewBufferString("status=" + status))
 	if err != nil {
 		panic(err)
 	}
 	headerString := GetCompleteHeaderString(header)
 	fmt.Printf("%s\n\n", headerString)
 	req.Header.Add("Authorization", headerString)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Content-Length", strconv.Itoa(len("status=" + status)))
 	res, err := client.Do(req)
 	if err != nil {
 		panic(err)

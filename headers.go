@@ -1,7 +1,6 @@
 package main
 
 import (
-		"fmt"
 		"strconv"
 		"regexp"
 		"encoding/base64"
@@ -11,17 +10,19 @@ import (
 		"net/url"
 		"crypto/sha1"
 		"crypto/hmac"
+		"strings"
 )
 
 func QEscape(toEscape string) string {
-	return url.QueryEscape(toEscape)
+	escaped := url.QueryEscape(toEscape)
+	return strings.Replace(escaped, "+", "%20", -1)
 }
 
 func GetHeaderValues() *Header {
 	var header Header
 	header.SignatureMethod = "HMAC-SHA1"
 	header.Version = "1.0"
-	
+
 	consumerKey, err := ioutil.ReadFile("consumer_key.txt")
 	if err != nil {
 		panic(err)
@@ -56,7 +57,8 @@ func UpdateHeaderValues(header Header, status string) Header {
 	header.Nonce = reg.ReplaceAllString(nonce, "")
 	header.Timestamp = strconv.FormatInt(int64(time.Now().Unix()), 10)
 
-	paramString := "oauth_consumer_key=" + QEscape(header.ConsumerKey)
+	paramString := "include_entities=true"
+	paramString += "&oauth_consumer_key=" + QEscape(header.ConsumerKey)
 	paramString += "&oauth_nonce=" + QEscape(header.Nonce)
 	paramString += "&oauth_signature_method=" + header.SignatureMethod
 	paramString += "&oauth_timestamp=" + header.Timestamp
@@ -65,10 +67,9 @@ func UpdateHeaderValues(header Header, status string) Header {
 	paramString += "&status=" + status
 
 	base := []byte(header.PartialBaseString + QEscape(paramString))
-	fmt.Printf("%s\n\n", string(base))
 	h := hmac.New(sha1.New, []byte(header.SigningKey))
 	h.Write(base)
-	header.Signature = base64.StdEncoding.EncodeToString(h.Sum(nil))
+	header.Signature = QEscape(base64.StdEncoding.EncodeToString(h.Sum(nil)))
 	return header
 }
 
